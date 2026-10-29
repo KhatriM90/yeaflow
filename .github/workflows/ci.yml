@@ -35,7 +35,7 @@ jobs:
         env:
           PGPASSWORD: ci-only-password
         run: psql -h localhost -U yeaflow_ci -d postgres -c "CREATE ROLE yeaflow_test LOGIN CREATEDB NOSUPERUSER PASSWORD 'ci-only-password';"
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - name: Restore (fails on known-vulnerable packages)
