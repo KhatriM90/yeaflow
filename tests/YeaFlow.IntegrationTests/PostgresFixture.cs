@@ -29,6 +29,14 @@ public sealed class PostgresFixture : IAsyncLifetime
         await using (var admin = new NpgsqlConnection(_adminConnection))
         {
             await admin.OpenAsync();
+
+            // Superusers and BYPASSRLS roles skip row-level security, so isolation tests would test nothing.
+            await using var check = new NpgsqlCommand("SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user", admin);
+            if (await check.ExecuteScalarAsync() is true)
+            {
+                throw new InvalidOperationException("YEAFLOW_PG must use a role without SUPERUSER or BYPASSRLS (it needs CREATEDB).");
+            }
+
             await using var create = new NpgsqlCommand($"CREATE DATABASE \"{_database}\"", admin);
             await create.ExecuteNonQueryAsync();
         }

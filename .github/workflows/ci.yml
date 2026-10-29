@@ -26,10 +26,15 @@ jobs:
     env:
       DOTNET_NOLOGO: "1"
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-      # Integration tests create and drop their own database with this role.
-      YEAFLOW_PG: Host=localhost;Database=postgres;Username=yeaflow_ci;Password=ci-only-password
+      # Integration tests create and drop their own database with this role. It must not be a superuser:
+      # superusers bypass row-level security, which would hide isolation bugs.
+      YEAFLOW_PG: Host=localhost;Database=postgres;Username=yeaflow_test;Password=ci-only-password
     steps:
       - uses: actions/checkout@v4
+      - name: Create non-superuser test role
+        env:
+          PGPASSWORD: ci-only-password
+        run: psql -h localhost -U yeaflow_ci -d postgres -c "CREATE ROLE yeaflow_test LOGIN CREATEDB NOSUPERUSER PASSWORD 'ci-only-password';"
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json

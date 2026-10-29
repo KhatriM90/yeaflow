@@ -19,7 +19,7 @@ ConnectionStrings__YeaFlow="$YEAFLOW_PG" dotnet run --project src/YeaFlow.Api --
 cd web && npm ci && npm run dev   # http://localhost:5173, proxies /api to :5080
 
 # Tests
-dotnet test --solution YeaFlow.slnx   # integration tests run when YEAFLOW_PG points at a role with CREATEDB
+dotnet test --solution YeaFlow.slnx   # integration tests run when YEAFLOW_PG points at a CREATEDB role that is NOT a superuser
 cd web && npm test
 ```
 
@@ -32,7 +32,7 @@ cd web && npm test
 | Posting service + jobs | `YeaFlow.Application/Postings` | Persist-before-send, duplicate-click handling, optimistic claim so only one worker submits, reconciliation by `U_YF_TxnId`, per-tenant Hangfire jobs. |
 | Tenancy and seats | `YeaFlow.Domain/Tenancy`, `Application/Users/SeatService` | Starter 5 / Business 10 / Enterprise 20, each person counted once, tenant row lock so concurrent activations cannot overshoot, downgrade only if active users fit. |
 | Roles and permissions | `YeaFlow.Domain/Identity` | Eight roles from scope section 4, `{Module}.{Resource}.{Action}` permissions, MFA required for app admin, approver and banking. Enforced in the application layer; the API resolves roles from the app DB, never from the token. |
-| Isolation | `Infrastructure/Persistence` + migration `TenantRowLevelSecurity` | EF query filters **and** PostgreSQL RLS (FORCEd) on every tenant table, cross-tenant write guard, append-only audit trail enforced by trigger. |
+| Isolation | `Infrastructure/Persistence` + migration `TenantRowLevelSecurity` | EF query filters **and** PostgreSQL RLS (FORCEd) on every tenant table, cross-tenant write guard, append-only audit trail enforced by trigger. Superuser and BYPASSRLS roles skip RLS, so the API and tests must never connect as one. |
 | Service Layer client | `YeaFlow.SapConnector/ServiceLayer` | Login, bounded session pool per company (licence-aware), re-login on 401, ETag/If-Match PATCH, SQLQueries with bound params, failure classification (Rejected / TransientNotSent / OutcomeUnknown / ConcurrencyConflict). No SQL write path exists. |
 | Fiscalisation | `YeaFlow.Fiscal` | `IFiscalisationAdapter`, `TimsAddOnAdapter` (reads the tenant's existing add-on UDFs, optional trigger flag), `FiscalPrintGuard` that blocks final tax-invoice print/email until signed with CUIN, CU serial and QR. |
 | Reporting dialects | `YeaFlow.Reporting` | SQL Server and HANA dialects behind `ISqlDialect`; identifier and page-size validation. |
