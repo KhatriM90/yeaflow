@@ -1,0 +1,40 @@
+:root {
+  --yf-primary: #0F766E;
+  --yf-primary-hover: #0B5A54;
+  --yf-primary-bright: #2DD4BF;
+  --yf-ink: #0B1F2A;
+  --yf-accent: #F59E0B;
+  --yf-accent-text: #92400E;
+  --yf-bg: #F6F8F9;
+  --yf-surface: #FFFFFF;
+  --yf-border: #DDE3E7;
+  --yf-muted: #5A6B76;
+
+  --yf-status-draft-bg: #EEF2F4;            --yf-status-draft-fg: #3B4F5C;
+  --yf-status-approval-bg: #FEF3C7;         --yf-status-approval-fg: #92400E;
+  --yf-status-queued-bg: #DBEAFE;           --yf-status-queued-fg: #1E40AF;
+  --yf-status-posted-bg: #CCFBF1;           --yf-status-posted-fg: #115E59;
+  --yf-status-failed-bg: #FEE2E2;           --yf-status-failed-fg: #991B1B;
+  --yf-status-unknown-bg: #EDE9FE;          --yf-status-unknown-fg: #5B21B6;
+  --yf-status-tims-bg: #0B1F2A;             --yf-status-tims-fg: #FFFFFF;
+
+  --yf-font-display: Manrope, system-ui, sans-serif;
+  --yf-font-body: Inter, system-ui, sans-serif;
+  --yf-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --yf-radius-control: 10px;
+  --yf-radius-card: 16px;
+  --yf-radius-pill: 999px;
+}
+
+/* Google Fonts:
+   https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap */
+
+body { margin: 0; background: var(--yf-bg); color: var(--yf-ink); font-family: var(--yf-font-body); font-size: 14px; }
+h1, h2, h3 { font-family: var(--yf-font-display); letter-spacing: -0.02em; }
+a { color: var(--yf-primary); } a:hover { color: var(--yf-primary-hover); }
+.yf-num, .yf-docno { font-family: var(--yf-font-mono); font-variant-numeric: tabular-nums; }
+.yf-chip { display: inline-block; padding: 5px 12px; border-radius: var(--yf-radius-pill); font-size: 13px; font-weight: 600; }
+.yf-btn-primary { min-height: 44px; padding: 0 18px; border: 0; border-radius: var(--yf-radius-control); background: var(--yf-primary); color: #fff; font: inherit; font-weight: 600; }
+.yf-btn-primary:hover { background: var(--yf-primary-hover); }
+.yf-card { background: var(--yf-surface); border: 1px solid var(--yf-border); border-radius: var(--yf-radius-card); }

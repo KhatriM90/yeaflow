@@ -10,3 +10,4 @@ web/dist/
 .env
 .env.*
 appsettings.*.local.json
+*.tsbuildinfo

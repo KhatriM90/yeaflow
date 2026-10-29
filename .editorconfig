@@ -1,0 +1,37 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,ts,tsx,css,html,props,csproj}]
+indent_size = 2
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+dotnet_sort_system_directives_first = true
+# Library code: ConfigureAwait is not needed in ASP.NET Core / worker hosts.
+dotnet_diagnostic.CA2007.severity = none
+# Logging via message templates is fine at our volumes; revisit with LoggerMessage source generators later.
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
+# Domain exceptions carry required context; parameterless constructors would be meaningless.
+dotnet_diagnostic.CA1032.severity = none
+# Underscores in test names (Method_State_Result) are intentional.
+dotnet_diagnostic.CA1707.severity = none
+# Business vocabulary ("Signed", "Decimal", "to") is clearer than avoiding type names / VB keywords.
+dotnet_diagnostic.CA1720.severity = none
+dotnet_diagnostic.CA1716.severity = none
+
+# EF Core generated migrations
+[**/Migrations/*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+
+[tests/**.cs]
+# Integration tests run to completion; per-call TestContext tokens add noise without value here.
+dotnet_diagnostic.xUnit1051.severity = none
