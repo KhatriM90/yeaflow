@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/YeaFlow.Api/YeaFlow.Api.csproj" />
+    <Project Path="src/YeaFlow.Application/YeaFlow.Application.csproj" />
+    <Project Path="src/YeaFlow.Domain/YeaFlow.Domain.csproj" />
+    <Project Path="src/YeaFlow.Fiscal/YeaFlow.Fiscal.csproj" />
+    <Project Path="src/YeaFlow.Infrastructure/YeaFlow.Infrastructure.csproj" />
+    <Project Path="src/YeaFlow.Reporting/YeaFlow.Reporting.csproj" />
+    <Project Path="src/YeaFlow.Sap.Contracts/YeaFlow.Sap.Contracts.csproj" />
+    <Project Path="src/YeaFlow.SapConnector/YeaFlow.SapConnector.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/YeaFlow.IntegrationTests/YeaFlow.IntegrationTests.csproj" />
+    <Project Path="tests/YeaFlow.UnitTests/YeaFlow.UnitTests.csproj" />
+  </Folder>
+</Solution>

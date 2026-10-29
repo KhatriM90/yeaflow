@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\YeaFlow.Domain\YeaFlow.Domain.csproj" />
+    <ProjectReference Include="..\YeaFlow.Sap.Contracts\YeaFlow.Sap.Contracts.csproj" />
+    <ProjectReference Include="..\YeaFlow.Fiscal\YeaFlow.Fiscal.csproj" />
+    <ProjectReference Include="..\YeaFlow.Reporting\YeaFlow.Reporting.csproj" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+</Project>
