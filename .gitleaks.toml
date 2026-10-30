@@ -1,0 +1,8 @@
+# Secret scanning (scope section 9). Default rules, plus one narrow exception: the local demo connector secret, which only
+# authenticates against a local demo database (DemoMode, Development only). Real secrets are never allowlisted.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Local demo connector secret (Development-only demo mode)"
+regexes = ['''local-demo-connector-secret-not-for-production''']
