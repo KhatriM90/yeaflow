@@ -1,14 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using YeaFlow.Application.Common;
+using YeaFlow.Application.Connectors;
 using YeaFlow.Application.Postings;
 using YeaFlow.Application.Tenancy;
 using YeaFlow.Application.Users;
+using YeaFlow.Infrastructure.Connectors;
 using YeaFlow.Infrastructure.Context;
 using YeaFlow.Infrastructure.Jobs;
 using YeaFlow.Infrastructure.Persistence;
 using YeaFlow.Infrastructure.Persistence.Repositories;
-using YeaFlow.Infrastructure.Sap;
 
 namespace YeaFlow.Infrastructure;
 
@@ -32,7 +33,12 @@ public static class DependencyInjection
         services.AddScoped<IPostingIntentRepository, PostingIntentRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<ISapGateway, PendingConnectorSapGateway>();
+        services.AddScoped<IConnectorRepository, ConnectorRepository>();
+        services.AddScoped<ICompanyRepository, CompanyRepository>();
+        services.AddSingleton<TenantScope>();
+        services.AddOptions<RelayOptions>();
+        services.AddScoped<ConnectorRelayHub>();
+        services.AddScoped<ISapGateway, ConnectorRelaySapGateway>();
         services.AddTransient<TenantJobRunner>();
         return services;
     }

@@ -10,6 +10,7 @@ Newest decisions override older ones and override the scope document where they 
 | D-004 | 2026-10-29 | First target: SAP B1 10 FP 2505 on SQL Server. HANA to be priced as an early phase; reporting SQL built behind a dialect layer from day one. | Agreed |
 | D-005 | 2026-10-29 | Brand theme: Flow Teal #0F766E, Ink #0B1F2A, Savanna Amber #F59E0B, Mist #F6F8F9; Manrope / Inter / JetBrains Mono. See 04_Brand_and_UI_Guide.md. | Agreed |
 | D-006 | 2026-10-29 | Developer scope v1.1 accepted as working baseline (adds UX, tenant configuration, document delivery, Kenya compliance, platform operations, secure SDLC, release/support). | Agreed |
+| D-007 | 2026-10-30 | The SAP connector makes **outbound-only** HTTPS connections to the YeaFlow API and long-polls it for work; the customer opens no inbound ports. Each connector has its own token (`Authorization: Connector {tenant}.{connector}.{secret}`); the API stores only a SHA-256 hash and shows the token once at registration. A command the connector never took is withdrawn and treated as "not sent"; a command it took but did not answer is "outcome unknown" and goes to reconciliation. | Agreed |
 
 ## Open — to close during discovery
 

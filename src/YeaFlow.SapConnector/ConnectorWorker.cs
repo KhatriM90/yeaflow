@@ -1,13 +1,13 @@
 using System.Reflection;
 using Microsoft.Extensions.Options;
 using YeaFlow.Sap.Contracts.Connector;
+using YeaFlow.SapConnector.Relay;
 using YeaFlow.SapConnector.ServiceLayer;
 
 namespace YeaFlow.SapConnector;
 
 /// <summary>
-/// Keeps Service Layer sessions healthy and produces heartbeats for the operator console.
-/// Relaying posting commands from the YeaFlow API (outbound-only, authenticated) is the next connector milestone.
+/// Keeps Service Layer sessions healthy and sends heartbeats to the API for the operator console.
 /// </summary>
 public sealed class ConnectorWorker : BackgroundService
 {
@@ -15,13 +15,15 @@ public sealed class ConnectorWorker : BackgroundService
         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
 
     private readonly ServiceLayerClientFactory _clients;
+    private readonly RelayClient _relay;
     private readonly IOptionsMonitor<ConnectorOptions> _options;
     private readonly TimeProvider _time;
     private readonly ILogger<ConnectorWorker> _logger;
 
-    public ConnectorWorker(ServiceLayerClientFactory clients, IOptionsMonitor<ConnectorOptions> options, TimeProvider time, ILogger<ConnectorWorker> logger)
+    public ConnectorWorker(ServiceLayerClientFactory clients, RelayClient relay, IOptionsMonitor<ConnectorOptions> options, TimeProvider time, ILogger<ConnectorWorker> logger)
     {
         _clients = clients;
+        _relay = relay;
         _options = options;
         _time = time;
         _logger = logger;
@@ -38,6 +40,18 @@ public sealed class ConnectorWorker : BackgroundService
                 heartbeat.Version,
                 heartbeat.Companies.Count(c => c.ServiceLayerReachable),
                 heartbeat.Companies.Count);
+
+            if (_relay.IsConfigured)
+            {
+                try
+                {
+                    await _relay.HeartbeatAsync(heartbeat, stoppingToken);
+                }
+                catch (HttpRequestException ex)
+                {
+                    _logger.LogWarning(ex, "Heartbeat to the YeaFlow API failed");
+                }
+            }
 
             await Task.Delay(TimeSpan.FromSeconds(_options.CurrentValue.HeartbeatSeconds), _time, stoppingToken);
         }

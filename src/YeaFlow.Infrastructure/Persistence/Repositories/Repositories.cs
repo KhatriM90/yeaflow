@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using YeaFlow.Application.Connectors;
 using YeaFlow.Application.Postings;
 using YeaFlow.Application.Tenancy;
 using YeaFlow.Application.Users;
+using YeaFlow.Domain.Connectors;
 using YeaFlow.Domain.Identity;
 using YeaFlow.Domain.Posting;
 using YeaFlow.Domain.Tenancy;
@@ -89,4 +91,34 @@ internal sealed class UserRepository : IUserRepository
 
     public Task<int> CountActiveAsync(CancellationToken cancellationToken) =>
         _db.Users.CountAsync(u => u.IsActive, cancellationToken);
+}
+
+internal sealed class ConnectorRepository : IConnectorRepository
+{
+    private readonly YeaFlowDbContext _db;
+
+    public ConnectorRepository(YeaFlowDbContext db) => _db = db;
+
+    public Task<Connector?> GetAsync(Guid connectorId, CancellationToken cancellationToken) =>
+        _db.Connectors.FirstOrDefaultAsync(c => c.Id == connectorId, cancellationToken);
+
+    public async Task<IReadOnlyList<Connector>> ListAsync(CancellationToken cancellationToken) =>
+        await _db.Connectors.OrderBy(c => c.Name).ToListAsync(cancellationToken);
+
+    public void Add(Connector connector) => _db.Connectors.Add(connector);
+}
+
+internal sealed class CompanyRepository : ICompanyRepository
+{
+    private readonly YeaFlowDbContext _db;
+
+    public CompanyRepository(YeaFlowDbContext db) => _db = db;
+
+    public Task<Company?> GetAsync(Guid companyId, CancellationToken cancellationToken) =>
+        _db.Companies.FirstOrDefaultAsync(c => c.Id == companyId, cancellationToken);
+
+    public Task<bool> SapCompanyDbExistsAsync(string sapCompanyDb, CancellationToken cancellationToken) =>
+        _db.Companies.AnyAsync(c => c.SapCompanyDb == sapCompanyDb, cancellationToken);
+
+    public void Add(Company company) => _db.Companies.Add(company);
 }
