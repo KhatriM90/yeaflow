@@ -46,6 +46,14 @@ public sealed class ExecutionContextMiddleware : IMiddleware
             return;
         }
 
+        if (principal.IsInRole(ConnectorAuthenticationHandler.ConnectorRole))
+        {
+            // Connectors act for their own tenant only and can reach nothing but the relay endpoints (see Program).
+            _context.InitialiseForSystem(Guid.Parse(principal.FindFirstValue(TenantClaim)!), correlationId);
+            await next(http);
+            return;
+        }
+
         if (principal.IsInRole(OperatorRole))
         {
             // Operators manage tenants; they get no tenant business data (scope section 8, support access).

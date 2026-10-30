@@ -3,6 +3,7 @@ using Npgsql;
 using YeaFlow.Application.Common;
 using YeaFlow.Domain.Audit;
 using YeaFlow.Domain.Common;
+using YeaFlow.Domain.Connectors;
 using YeaFlow.Domain.Identity;
 using YeaFlow.Domain.Posting;
 using YeaFlow.Domain.Tenancy;
@@ -35,6 +36,10 @@ public sealed class YeaFlowDbContext : DbContext, IUnitOfWork
     public DbSet<PostingIntent> PostingIntents => Set<PostingIntent>();
 
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+
+    public DbSet<Connector> Connectors => Set<Connector>();
+
+    public DbSet<ConnectorCommand> ConnectorCommands => Set<ConnectorCommand>();
 
     /// <summary>Used by query filters; Guid.Empty matches nothing, so an uninitialised scope sees no tenant data.</summary>
     internal Guid CurrentTenantId => _context is { HasTenant: true } ? _context.TenantId : Guid.Empty;
@@ -92,6 +97,8 @@ public sealed class YeaFlowDbContext : DbContext, IUnitOfWork
         modelBuilder.Entity<UserCompanyAccess>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         modelBuilder.Entity<PostingIntent>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
         modelBuilder.Entity<AuditEvent>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<Connector>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<ConnectorCommand>().HasQueryFilter(e => e.TenantId == CurrentTenantId);
     }
 
     /// <summary>Rejects writes of tenant data belonging to a tenant other than the current one.</summary>

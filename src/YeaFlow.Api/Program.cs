@@ -2,7 +2,9 @@ using System.Globalization;
 using System.Text.Json.Serialization;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -11,8 +13,12 @@ using YeaFlow.Api.Endpoints;
 using YeaFlow.Api.Infrastructure;
 using YeaFlow.Application;
 using YeaFlow.Infrastructure;
+using YeaFlow.Infrastructure.Connectors;
 using YeaFlow.Infrastructure.Jobs;
 using YeaFlow.Infrastructure.Persistence;
+using YeaFlow.Sap.Contracts.Connector;
+
+const string UserPolicy = "User";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,16 +39,26 @@ builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
 builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 builder.Services.AddScoped<ExecutionContextMiddleware>();
 
+builder.Services.Configure<RelayOptions>(builder.Configuration.GetSection(RelayOptions.SectionName));
+
+const string SelectScheme = "user-or-connector";
 builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddAuthentication(SelectScheme)
+    .AddPolicyScheme(SelectScheme, null, o => o.ForwardDefaultSelector = ctx =>
+        ConnectorAuthenticationHandler.HasConnectorHeader(ctx) ? RelayRoutes.AuthScheme : JwtBearerDefaults.AuthenticationScheme)
+    .AddScheme<AuthenticationSchemeOptions, ConnectorAuthenticationHandler>(RelayRoutes.AuthScheme, null)
     .AddJwtBearer(o =>
     {
         builder.Configuration.GetSection("Auth").Bind(o);
         o.MapInboundClaims = false;
         o.TokenValidationParameters.RoleClaimType = "roles";
     });
+
+// People use /api/v1; connectors use /connector/v1. Neither can reach the other's endpoints.
 builder.Services.AddAuthorizationBuilder()
-    .SetFallbackPolicy(new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
+    .AddPolicy(UserPolicy, p => p.RequireAuthenticatedUser().RequireAssertion(c => !c.User.IsInRole(ConnectorAuthenticationHandler.ConnectorRole)))
+    .AddPolicy(ConnectorEndpoints.Policy, p => p.RequireAuthenticatedUser().RequireRole(ConnectorAuthenticationHandler.ConnectorRole));
 
 builder.Services.AddHealthChecks().AddDbContextCheck<YeaFlowDbContext>("database", tags: ["ready"]);
 
@@ -86,9 +102,10 @@ app.UseAuthorization();
 app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();
 app.MapHealthChecks("/health/ready", new() { Predicate = c => c.Tags.Contains("ready") }).AllowAnonymous();
 
-var api = app.MapGroup("/api/v1");
+var api = app.MapGroup("/api/v1").RequireAuthorization(UserPolicy);
 api.MapPostingEndpoints();
 api.MapAdminEndpoints();
+app.MapConnectorEndpoints();
 
 if (hangfireEnabled)
 {

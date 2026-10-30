@@ -36,16 +36,25 @@ cd web && npm test
 | Service Layer client | `YeaFlow.SapConnector/ServiceLayer` | Login, bounded session pool per company (licence-aware), re-login on 401, ETag/If-Match PATCH, SQLQueries with bound params, failure classification (Rejected / TransientNotSent / OutcomeUnknown / ConcurrencyConflict). No SQL write path exists. |
 | Fiscalisation | `YeaFlow.Fiscal` | `IFiscalisationAdapter`, `TimsAddOnAdapter` (reads the tenant's existing add-on UDFs, optional trigger flag), `FiscalPrintGuard` that blocks final tax-invoice print/email until signed with CUIN, CU serial and QR. |
 | Reporting dialects | `YeaFlow.Reporting` | SQL Server and HANA dialects behind `ISqlDialect`; identifier and page-size validation. |
-| API | `YeaFlow.Api` | `/api/v1/postings`, reconciliation console endpoints, seats, operator tenant creation, `/me`, RFC 7807 errors, health checks, Serilog, OpenTelemetry (OTLP when configured), Hangfire. |
+| Connector relay (D-007) | `Infrastructure/Connectors`, `Api/Endpoints/ConnectorEndpoints.cs`, `SapConnector/Relay` | The connector long-polls `POST /connector/v1/commands/lease`, runs each command against Service Layer and reports to `/commands/{id}/result`. Commands are leased with `FOR UPDATE SKIP LOCKED`, are company- and tenant-scoped under RLS, and can be withdrawn only while nobody has leased them, which is what makes "not sent" provable. Connector tokens cannot call `/api/v1` and user sign-ins cannot call `/connector/v1`. |
+| API | `YeaFlow.Api` | `/api/v1/postings`, reconciliation console endpoints, seats, operator tenant creation, connector registration and company setup, `/me`, RFC 7807 errors, health checks, Serilog, OpenTelemetry (OTLP when configured), Hangfire. |
 | Front end | `web/` | React + TypeScript + Vite, brand theme, Ink sidebar with all modules, global search box, company switcher, status chips, AG Grid lines grid with exact totals, document-screen layout preview. |
 | CI | `.github/workflows` | Build with analyzers as errors, unit + PostgreSQL integration tests, migration drift check, npm audit, gitleaks secret scan, CodeQL, Dependabot. |
 
+## Connect a connector (D-007)
+
+1. Operator (role `yeaflow_operator`, MFA) registers a connector: `POST /api/v1/platform/tenants/{tenantId}/connectors {"name":"Head office"}`. The response holds `connectorId` and `token`; the token is shown **once**.
+2. Operator adds each SAP company on that connector: `POST /api/v1/platform/tenants/{tenantId}/companies {"name","sapCompanyDb","databaseType":"SqlServer","connectorId"}`.
+3. On the customer server, set the connector's `Connector` section: `ConnectorId`, `ApiBaseUrl` (e.g. `https://app.yeaflow.example/`), `Token` (from a secret store or environment variable `Connector__Token`, never committed), and one `Companies` entry per SAP company with its Service Layer URL and technical user.
+4. Start the connector service. `GET /api/v1/platform/tenants/{tenantId}/connectors` shows it online once heartbeats arrive.
+
+Relay timings live in the API's `Relay` section: `CommandTimeout` (30 s, how long a user's submit waits), `PollInterval`, `MaxLeaseWait` (25 s).
+
 ## Not built yet (next steps, in order)
 
-1. **API ↔ connector relay.** `ISapGateway` currently returns "no connector configured", so postings queue, retry and fail visibly but never reach SAP. The connector side (`DocumentPoster`) is ready. Proposed transport: the connector opens an authenticated outbound HTTPS/WebSocket channel to the API (no inbound ports at the customer). Needs a decisions-log entry.
-2. **Identity (2.2):** OIDC sign-in per tenant, user/role admin screens, tenant-editable role permissions. The web sign-in is a local preview session until then.
-3. **Operator console (2.3):** connector registration, Service Layer connectivity test, company discovery, onboarding checklist.
-4. Business modules from milestone 3 onward (BP, Sales with TIMS, Purchasing, Inventory, reports).
+1. **Identity (2.2):** OIDC sign-in per tenant, user/role admin screens, tenant-editable role permissions. The web sign-in is a local preview session until then.
+2. **Operator console (2.3):** screens over the connector/company endpoints, Service Layer connectivity test, company discovery, token rotation, onboarding checklist.
+3. Business modules from milestone 3 onward (BP, Sales with TIMS, Purchasing, Inventory, reports).
 
 ## Must verify against the installed $metadata / test company
 
@@ -53,4 +62,5 @@ cd web && npm test
 - Service Layer behaviour when an approval procedure applies: does it return a draft (and which status/error), per document type. `SapPostOutcome.DraftForApproval` is modelled but not yet detected.
 - Error classification: which business errors come back as 400 vs 500 on FP 2505, and TransactionNotification message format.
 - Session timeout value and licence consumption per Service Layer session for the tenant's licence strategy (Q-004).
+- Long-poll through the customer's proxy/firewall: idle HTTPS requests of ~25 s must not be cut; lower `WaitSeconds` if they are.
 - TIMS add-on UDF names, signed/failed values and trigger method per tenant (Q-003).

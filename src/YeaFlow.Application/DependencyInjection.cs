@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using YeaFlow.Application.Connectors;
 using YeaFlow.Application.Postings;
 using YeaFlow.Application.Tenancy;
 using YeaFlow.Application.Users;
@@ -15,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<PostingJobs>();
         services.AddScoped<SeatService>();
         services.AddScoped<TenantOnboardingService>();
+        services.AddScoped<ConnectorAdminService>();
         return services;
     }
 }

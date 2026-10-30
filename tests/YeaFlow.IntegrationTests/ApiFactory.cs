@@ -6,10 +6,15 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using YeaFlow.Api.Infrastructure;
+using YeaFlow.Sap.Contracts.Connector;
 
 namespace YeaFlow.IntegrationTests;
 
-/// <summary>Hosts the real API against the fixture database, with a header-based test sign-in instead of OIDC.</summary>
+/// <summary>
+/// Hosts the real API against the fixture database, with a header-based test sign-in instead of OIDC. Requests carrying
+/// <c>Authorization: Connector ...</c> still go through the real connector authentication.
+/// </summary>
 public sealed class ApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _connectionString;
@@ -21,13 +26,18 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:YeaFlow", _connectionString);
         builder.UseSetting("Hangfire:Enabled", "false");
+
+        // Short relay timeout so "connector never answered" paths finish quickly (D-007).
+        builder.UseSetting("Relay:CommandTimeout", "00:00:03");
+        builder.UseSetting("Relay:PollInterval", "00:00:00.100");
         builder.ConfigureServices(services =>
         {
             services.AddAuthentication(o =>
             {
                 o.DefaultAuthenticateScheme = TestAuthHandler.SchemeName;
                 o.DefaultChallengeScheme = TestAuthHandler.SchemeName;
-            }).AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
+            }).AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, o =>
+                o.ForwardDefaultSelector = ctx => ConnectorAuthenticationHandler.HasConnectorHeader(ctx) ? RelayRoutes.AuthScheme : null);
         });
     }
 }

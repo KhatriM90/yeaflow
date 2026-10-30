@@ -9,6 +9,15 @@ public sealed class ConnectorOptions
 
     public Guid ConnectorId { get; set; }
 
+    /// <summary>YeaFlow API root, e.g. <c>https://app.yeaflow.co.ke/</c>. The connector only ever calls out to it (D-007).</summary>
+    public Uri? ApiBaseUrl { get; set; }
+
+    /// <summary>Token issued by the operator console at registration. Supply via <c>Connector__Token</c> or the secret store.</summary>
+    public string Token { get; set; } = string.Empty;
+
+    [Range(1, 20)]
+    public int MaxConcurrentCommands { get; set; } = 4;
+
     [Range(5, 3600)]
     public int HeartbeatSeconds { get; set; } = 30;
 
