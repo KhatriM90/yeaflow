@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { DocumentLinesGrid, type DocumentLineRow } from '../components/DocumentLinesGrid';
+import { PostToSap } from '../components/PostToSap';
 import { StatusChip } from '../components/StatusChip';
+import { useSession } from '../app/session';
+import { buildSalesOrderPayload } from '../lib/postings';
 import { add, applyDiscount, formatDecimal, isDecimal, multiply, parseDecimal, type Decimal } from '../lib/decimal';
 
 const sampleLines: DocumentLineRow[] = [
@@ -11,9 +14,14 @@ const sampleLines: DocumentLineRow[] = [
 /**
  * Layout preview of the document screen (04_Brand_and_UI_Guide, Document screen): header card → lines grid →
  * totals and document flow → approval. Sales documents (SAL01–SAL04) fill this in with live SAP data.
+ * In the local demo (signed in through the API) the order can be posted to simulated SAP; the customer code steers the
+ * simulated outcome (REJECT…, LOST…, DOWN…, anything else posts).
  */
 export function SalesOrderPreview() {
+  const { session } = useSession();
   const [lines, setLines] = useState(sampleLines);
+  const [cardCode, setCardCode] = useState('C00042');
+  const demo = session?.mode === 'demo';
   const subtotal = useMemo(
     () =>
       lines.reduce<Decimal>((sum, l) => {
@@ -29,7 +37,11 @@ export function SalesOrderPreview() {
       <header className="yf-page-header yf-page-header--row">
         <div>
           <h1>New sales order</h1>
-          <p className="yf-muted">Preview with sample data — prices, tax and totals will come from SAP.</p>
+          <p className="yf-muted">
+            {demo
+              ? 'Local demo: posts to simulated SAP through the connector. Try customer REJECT1, LOST1 or DOWN1 to see other outcomes.'
+              : 'Preview with sample data — prices, tax and totals will come from SAP.'}
+          </p>
         </div>
         <StatusChip status="Draft" />
       </header>
@@ -39,8 +51,14 @@ export function SalesOrderPreview() {
           <section className="yf-card yf-section" aria-label="Header">
             <dl className="yf-fields">
               <div>
-                <dt>Customer</dt>
-                <dd>C00042 · Mama Mboga Wholesalers</dd>
+                <dt>{demo ? <label htmlFor="card-code">Customer code</label> : 'Customer'}</dt>
+                <dd>
+                  {demo ? (
+                    <input id="card-code" className="yf-input" value={cardCode} onChange={(e) => setCardCode(e.target.value)} />
+                  ) : (
+                    'C00042 · Mama Mboga Wholesalers'
+                  )}
+                </dd>
               </div>
               <div>
                 <dt>Posting date</dt>
@@ -74,6 +92,14 @@ export function SalesOrderPreview() {
               </div>
             </dl>
           </section>
+          {demo && session && (
+            <PostToSap
+              companyId={session.companyId}
+              sapObject="Orders"
+              buildPayload={() => buildSalesOrderPayload(cardCode, dueDate(), lines)}
+              canReconcile={session.permissions.includes('Postings.Intent.Reconcile')}
+            />
+          )}
           <section className="yf-card yf-section" aria-label="Document flow">
             <h2>Document flow</h2>
             <ol className="yf-flow">
@@ -88,4 +114,9 @@ export function SalesOrderPreview() {
       </div>
     </>
   );
+}
+
+/** Two days from today, as SAP's yyyy-MM-dd. Real documents take the date from the form (SAL02). */
+function dueDate(): string {
+  return new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
 }

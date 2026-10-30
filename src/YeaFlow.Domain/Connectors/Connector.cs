@@ -50,6 +50,17 @@ public sealed class Connector : ITenantScoped
         return (new Connector(Guid.NewGuid(), tenantId, name.Trim(), Hash(secret), now), secret);
     }
 
+    /// <summary>
+    /// Registers a connector with a known id and secret. Only for the fixed local demo connector (Development demo mode);
+    /// real connectors always use <see cref="Register"/> so the secret is random and shown once.
+    /// </summary>
+    public static Connector RegisterWithKnownSecret(Guid id, Guid tenantId, string name, string secret, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(secret);
+        return new Connector(id, tenantId, name.Trim(), Hash(secret), now);
+    }
+
     public bool Verify(string secret) =>
         IsEnabled && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(Hash(secret)), Encoding.ASCII.GetBytes(SecretHash));
 

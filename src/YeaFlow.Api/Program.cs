@@ -9,6 +9,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
+using YeaFlow.Api.Demo;
 using YeaFlow.Api.Endpoints;
 using YeaFlow.Api.Infrastructure;
 using YeaFlow.Application;
@@ -21,6 +22,10 @@ using YeaFlow.Sap.Contracts.Connector;
 const string UserPolicy = "User";
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Local demo mode (pick-a-person sign-in + seeded demo tenant) is refused outside Development.
+DemoMode.EnsureAllowed(builder.Configuration, builder.Environment);
+var demoMode = DemoMode.IsEnabled(builder.Configuration);
 
 builder.Services.AddSerilog((_, cfg) => cfg
     .ReadFrom.Configuration(builder.Configuration)
@@ -42,10 +47,12 @@ builder.Services.AddScoped<ExecutionContextMiddleware>();
 builder.Services.Configure<RelayOptions>(builder.Configuration.GetSection(RelayOptions.SectionName));
 
 const string SelectScheme = "user-or-connector";
-builder.Services
+var authentication = builder.Services
     .AddAuthentication(SelectScheme)
     .AddPolicyScheme(SelectScheme, null, o => o.ForwardDefaultSelector = ctx =>
-        ConnectorAuthenticationHandler.HasConnectorHeader(ctx) ? RelayRoutes.AuthScheme : JwtBearerDefaults.AuthenticationScheme)
+        ConnectorAuthenticationHandler.HasConnectorHeader(ctx) ? RelayRoutes.AuthScheme
+        : demoMode && DemoMode.HasDemoCookie(ctx) ? DemoMode.Scheme
+        : JwtBearerDefaults.AuthenticationScheme)
     .AddScheme<AuthenticationSchemeOptions, ConnectorAuthenticationHandler>(RelayRoutes.AuthScheme, null)
     .AddJwtBearer(o =>
     {
@@ -53,6 +60,10 @@ builder.Services
         o.MapInboundClaims = false;
         o.TokenValidationParameters.RoleClaimType = "roles";
     });
+if (demoMode)
+{
+    authentication.AddDemoSignIn();
+}
 
 // People use /api/v1; connectors use /connector/v1. Neither can reach the other's endpoints.
 builder.Services.AddAuthorizationBuilder()
@@ -92,6 +103,13 @@ if (hangfireEnabled)
 
 var app = builder.Build();
 
+if (demoMode)
+{
+    var secret = builder.Configuration[$"{DemoMode.SectionName}:ConnectorSecret"]
+        ?? throw new InvalidOperationException("DemoMode:ConnectorSecret is required when demo mode is on.");
+    await DemoMode.SeedAsync(app.Services, secret);
+}
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseSerilogRequestLogging();
@@ -106,6 +124,10 @@ var api = app.MapGroup("/api/v1").RequireAuthorization(UserPolicy);
 api.MapPostingEndpoints();
 api.MapAdminEndpoints();
 app.MapConnectorEndpoints();
+if (demoMode)
+{
+    app.MapDemoEndpoints();
+}
 
 if (hangfireEnabled)
 {

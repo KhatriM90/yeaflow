@@ -21,6 +21,12 @@ public sealed class ConnectorOptions
     [Range(5, 3600)]
     public int HeartbeatSeconds { get; set; } = 30;
 
+    /// <summary>
+    /// Local demos only: answer Service Layer calls from an in-memory simulator instead of SAP. The connector refuses to
+    /// start with this on outside the Development environment.
+    /// </summary>
+    public bool SimulateSap { get; set; }
+
     public List<ServiceLayerCompanyOptions> Companies { get; set; } = [];
 }
 

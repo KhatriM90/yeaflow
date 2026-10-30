@@ -3,7 +3,9 @@ using YeaFlow.Application.Connectors;
 using YeaFlow.Application.Tenancy;
 using YeaFlow.Application.Users;
 using YeaFlow.Domain.Tenancy;
+using Microsoft.EntityFrameworkCore;
 using YeaFlow.Infrastructure.Context;
+using YeaFlow.Infrastructure.Persistence;
 
 namespace YeaFlow.Api.Endpoints;
 
@@ -11,13 +13,27 @@ public static class AdminEndpoints
 {
     public static RouteGroupBuilder MapAdminEndpoints(this RouteGroupBuilder api)
     {
-        api.MapGet("/me", (IExecutionContext context) => Results.Ok(new
+        api.MapGet("/me", async (IExecutionContext context, YeaFlowDbContext db, CancellationToken ct) =>
         {
-            context.TenantId,
-            context.UserId,
-            Permissions = context.Permissions.Order(StringComparer.Ordinal),
-            context.CompanyIds,
-        })).WithTags("Account");
+            // Name, roles and company names are display data for the web app; access is still decided per request.
+            var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == context.UserId, ct);
+            var companyIds = context.CompanyIds.ToList();
+            var companies = await db.Companies.AsNoTracking()
+                .Where(c => companyIds.Contains(c.Id))
+                .OrderBy(c => c.Name)
+                .Select(c => new { c.Id, c.Name, c.LocalCurrency })
+                .ToListAsync(ct);
+            return Results.Ok(new
+            {
+                context.TenantId,
+                context.UserId,
+                user?.DisplayName,
+                Roles = user?.Roles ?? [],
+                Permissions = context.Permissions.Order(StringComparer.Ordinal),
+                context.CompanyIds,
+                Companies = companies,
+            });
+        }).WithTags("Account");
 
         var admin = api.MapGroup("/admin").WithTags("Administration");
         admin.MapGet("/seats", async (SeatService seats, CancellationToken ct) => Results.Ok(await seats.GetUsageAsync(ct)));

@@ -10,8 +10,9 @@ import { ModulePlaceholder } from '../pages/ModulePlaceholder';
 const SalesOrderPreview = lazy(() => import('../pages/SalesOrderPreview').then((m) => ({ default: m.SalesOrderPreview })));
 
 function RequireSession({ children }: { children: ReactNode }) {
-  const { session } = useSession();
+  const { session, restoring } = useSession();
   const location = useLocation();
+  if (restoring) return <p className="yf-muted">Loading…</p>;
   return session ? children : <Navigate to="/login" replace state={{ from: location.pathname }} />;
 }
 

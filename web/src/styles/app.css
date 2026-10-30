@@ -95,3 +95,17 @@ p { margin: 0 0 12px; line-height: 1.5; }
   .yf-document { grid-template-columns: 1fr; }
   .yf-account__name, .yf-switcher__label { display: none; }
 }
+
+/* Local demo sign-in (Development only) */
+.yf-demo { margin: 16px 0 24px; padding: 16px; border: 1px dashed var(--yf-border); border-radius: var(--yf-radius-card); }
+.yf-demo h2 { font-size: 15px; margin: 0 0 4px; }
+.yf-demo__person { display: flex; flex-direction: column; align-items: flex-start; width: 100%; margin-top: 8px; padding: 10px 16px; text-align: left; }
+.yf-demo__person span { font-size: 12px; font-weight: 400; opacity: 0.85; }
+
+/* Posting to SAP from a document screen */
+.yf-post-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.yf-post-row > div { flex: 1 1 200px; }
+.yf-postings { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.yf-postings li { display: grid; gap: 4px; padding: 10px 0; border-top: 1px solid var(--yf-border); }
+.yf-postings__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.yf-btn-secondary { min-height: 36px; padding: 0 14px; border: 1px solid var(--yf-border); border-radius: var(--yf-radius-control); background: var(--yf-surface); font: inherit; font-weight: 600; cursor: pointer; }

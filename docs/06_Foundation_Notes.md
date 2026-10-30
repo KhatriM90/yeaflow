@@ -23,6 +23,40 @@ dotnet test --solution YeaFlow.slnx   # integration tests run when YEAFLOW_PG po
 cd web && npm test
 ```
 
+## Local demo (no SAP, no identity provider needed)
+
+Demo mode gives a pick-a-person sign-in and a seeded demo tenant, and the connector answers from a simulated SAP. Postings
+still go through the real path: API → posting intent → relay → connector → Service Layer client. Only Service Layer itself
+is simulated. Demo mode works only in the Development environment; the API and connector refuse to start with it
+anywhere else.
+
+```bash
+# Once: database role (as the postgres superuser)
+#   CREATE ROLE yeaflow_owner LOGIN CREATEDB PASSWORD 'devonly';
+#   CREATE DATABASE yeaflow OWNER yeaflow_owner;
+
+dotnet run --project src/YeaFlow.Api          # terminal 1: http://localhost:5080, migrates and seeds "Demo Ltd"
+dotnet run --project src/YeaFlow.SapConnector # terminal 2: simulated SAP, company SBO_DEMO_KE
+cd web && npm ci && npm run dev               # terminal 3: http://localhost:5173
+```
+
+Sign in as **Wanjiru Kamau** (sales) or **Otieno Ochieng** (app admin), open Sales and press "Post sales order". The
+customer code steers the simulated SAP:
+
+| Customer code | What happens | Posting state |
+|---|---|---|
+| anything else (e.g. `C00042`) | SAP creates the order | Posted, with SAP order number |
+| `REJECT…` | SAP validation error | Failed, SAP message shown |
+| `DOWN…` | Service Layer unavailable, nothing sent | Queued, retried automatically |
+| `LOST…` | Order created but the answer is lost | Outcome unknown → Posted after "Check SAP now" (admin) or the 2-minute reconciliation job |
+
+Stop the connector to see a posting wait, then go back to Queued ("nothing was sent"). The simulator keeps its documents
+in memory, so restarting the connector forgets them.
+
+Settings: `DemoMode` in `src/YeaFlow.Api/appsettings.Development.json`, and `Connector:SimulateSap` in
+`src/YeaFlow.SapConnector/appsettings.Development.json`. The demo connector secret there only works against a local demo
+database.
+
 ## What is built
 
 | Area | Where | Notes |
@@ -37,6 +71,7 @@ cd web && npm test
 | Fiscalisation | `YeaFlow.Fiscal` | `IFiscalisationAdapter`, `TimsAddOnAdapter` (reads the tenant's existing add-on UDFs, optional trigger flag), `FiscalPrintGuard` that blocks final tax-invoice print/email until signed with CUIN, CU serial and QR. |
 | Reporting dialects | `YeaFlow.Reporting` | SQL Server and HANA dialects behind `ISqlDialect`; identifier and page-size validation. |
 | Connector relay (D-007) | `Infrastructure/Connectors`, `Api/Endpoints/ConnectorEndpoints.cs`, `SapConnector/Relay` | The connector long-polls `POST /connector/v1/commands/lease`, runs each command against Service Layer and reports to `/commands/{id}/result`. Commands are leased with `FOR UPDATE SKIP LOCKED`, are company- and tenant-scoped under RLS, and can be withdrawn only while nobody has leased them, which is what makes "not sent" provable. Connector tokens cannot call `/api/v1` and user sign-ins cannot call `/connector/v1`. |
+| Local demo mode | `Api/Demo`, `SapConnector/Simulation` | Development-only sign-in as seeded people, demo tenant seeding, simulated Service Layer. See "Local demo" above. |
 | API | `YeaFlow.Api` | `/api/v1/postings`, reconciliation console endpoints, seats, operator tenant creation, connector registration and company setup, `/me`, RFC 7807 errors, health checks, Serilog, OpenTelemetry (OTLP when configured), Hangfire. |
 | Front end | `web/` | React + TypeScript + Vite, brand theme, Ink sidebar with all modules, global search box, company switcher, status chips, AG Grid lines grid with exact totals, document-screen layout preview. |
 | CI | `.github/workflows` | Build with analyzers as errors, unit + PostgreSQL integration tests, migration drift check, npm audit, gitleaks secret scan, CodeQL, Dependabot. |
